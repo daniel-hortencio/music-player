@@ -44,8 +44,20 @@ export default function Home() {
   }
 
   return (
-    <main className="py-6 pl-6 grid grid-cols-[1fr_28rem] gap-6 items-start h-dvh">
-      <div className="w-full aspect-video ">
+    <main className="py-6 pl-6 grid grid-cols-[1fr_28rem] gap-6 items-start h-dvh relative">
+      <div className="fixed top-0 left-0 w-full h-full bg-red-500 -z-10 blur-3xl opacity-50">
+        <Image
+          src={`https://i.ytimg.com/vi/${current}/hqdefault.jpg`}
+          fill
+          alt={`Background`}
+          objectFit="cover"
+          style={{
+            width: "100%",
+            height: "100%",
+          }}
+        />
+      </div>
+      <div className="w-full aspect-video realtive rounded-lg overflow-hidden">
         <ReactPlayer
           src={`https://www.youtube.com/watch?v=${current}`}
           style={{
