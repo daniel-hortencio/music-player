@@ -29,12 +29,13 @@ export default function Home() {
   const [current, setCurrent] = useState(list[0].v);
 
   function onEnded() {
-    const current_index = playlist.findIndex(({ v }) => v === current);
+    const current_playlist = randomMode ? randomPlaylist : playlist;
+    const current_index = current_playlist.findIndex(({ v }) => v === current);
 
     const next =
-      current_index === playlist.length - 1
-        ? playlist[0]
-        : playlist[current_index + 1];
+      current_index === current_playlist.length - 1
+        ? current_playlist[0]
+        : current_playlist[current_index + 1];
 
     setCurrent(next.v);
   }
