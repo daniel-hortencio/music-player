@@ -7,7 +7,7 @@ import { playlist } from "./playlist";
 import { Button } from "@/components/ui/button";
 
 export default function App() {
-  const playerRef = useRef(null);
+  const playerRef = useRef<YT.Player | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [playerReady, setPlayerReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -55,9 +55,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!playerReady || !playerRef.current) return;
+    const player = playerRef.current;
+    if (!playerReady || !player) return;
 
-    playerRef.current.loadVideoById(playlist[currentIndex].id);
+    player.loadVideoById(playlist[currentIndex].id);
   }, [currentIndex, playerReady]);
 
   return (
