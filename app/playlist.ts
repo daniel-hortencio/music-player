@@ -7,6 +7,7 @@ import { mr_big } from "../artists/mr-big";
 import { ritchie_kotzen } from "../artists/ritchie-kotzen";
 import { smith_kotzen } from "../artists/smith-kotzen";
 import { spin_doctors } from "../artists/spin-doctors";
+import { van_halen } from "../artists/van-halen";
 import { whitesnake } from "../artists/whitesnake";
 import { winger } from "../artists/winger";
 import { SongType } from "./types";
@@ -21,6 +22,7 @@ export const playlist: SongType[] = [
   ...ritchie_kotzen,
   ...smith_kotzen,
   ...spin_doctors,
+  ...van_halen,
   ...whitesnake,
   ...winger,
 ];
