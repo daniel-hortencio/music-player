@@ -103,6 +103,8 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(100);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   const [selectedCategory, setSelectedCategory] =
     useState<string>(getInitialCategory);
   const [selectedArtist, setSelectedArtist] =
@@ -186,6 +188,21 @@ export default function App() {
     playerRef.current?.setPlaybackRate(rate);
   };
 
+  const handleSeekChange = (value: number[]) => {
+    setCurrentTime(value[0]);
+  };
+
+  const handleSeekCommit = (value: number[]) => {
+    playerRef.current?.seekTo(value[0], true);
+  };
+
+  const formatTime = (seconds: number) => {
+    const total = Math.floor(seconds);
+    const minutes = Math.floor(total / 60);
+    const secs = total % 60;
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
+
   useEffect(() => {
     const createPlayer = () => {
       playerRef.current = new window.YT.Player("youtube-player", {
@@ -208,6 +225,8 @@ export default function App() {
               next();
             }
             setIsPlaying(event.data === window.YT.PlayerState.PLAYING);
+            setDuration(event.target.getDuration());
+            setCurrentTime(event.target.getCurrentTime());
           },
         },
       });
@@ -234,7 +253,21 @@ export default function App() {
     if (!playerReady || !player) return;
 
     player.loadVideoById(playlist[currentIndex].id);
+    setCurrentTime(0);
+    setDuration(0);
   }, [currentIndex, playerReady]);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const interval = setInterval(() => {
+      const player = playerRef.current;
+      if (!player) return;
+      setCurrentTime(player.getCurrentTime());
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [isPlaying]);
 
   useEffect(() => {
     setCookie(COOKIE_KEY, playlist[currentIndex].id);
@@ -257,7 +290,7 @@ export default function App() {
         className="fixed inset-0 -z-10 w-full h-full object-cover blur-3xl opacity-30 pointer-events-none animate-[thumbnail-fade-in_0.7s_ease-in-out]"
       />
       <div className="h-screen w-screen lg:grid grid-cols-[1fr_24rem] overflow-x-hidden relative">
-        <div className="flex flex-col justify-start">
+        <div className="flex flex-col justify-start ">
           <div className="relative w-full aspect-video z-10">
             <div
               id="youtube-player"
@@ -265,7 +298,22 @@ export default function App() {
             />
           </div>
 
-          <div className="py-2 px-4">
+          <div className="p-2 space-y-4">
+            <div className="flex gap-2 items-center px-1">
+              <span className="text-white/80 text-xs tabular-nums w-9">
+                {formatTime(currentTime)}
+              </span>
+              <Slider
+                value={[currentTime]}
+                max={duration || 1}
+                step={1}
+                onValueChange={handleSeekChange}
+                onValueCommit={handleSeekCommit}
+              />
+              <span className="text-white/80 text-xs tabular-nums w-min">
+                {formatTime(duration)}
+              </span>
+            </div>
             <div className="flex gap-2">
               <Button onClick={previous} size="icon">
                 <SkipBackIcon size={20} />
@@ -308,8 +356,8 @@ export default function App() {
             </div>
           </div>
         </div>
-        <div className="lg:max-h-screen lg:overflow-y-hidden flex flex-col">
-          <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-4">
+        <div className="lg:max-h-screen lg:overflow-y-hidden flex flex-col border-t border-white/10">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-2 pt-2">
             <div className="space-x-2">
               {selectedCategory !== ALL_VALUE && (
                 <Badge variant="secondary" className="gap-1 pr-1">
@@ -348,19 +396,19 @@ export default function App() {
                 className="flex w-auto gap-2 p-3"
               >
                 <div className="flex flex-col gap-1">
-                  <DropdownMenuLabel className="p-0">
-                    Categoria
+                  <DropdownMenuLabel className="p-0 text-white">
+                    Categories
                   </DropdownMenuLabel>
                   <Select
                     value={selectedCategory}
                     onValueChange={setSelectedCategory}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="text-white">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={ALL_VALUE}>
-                        Todas ({playlist.length})
+                        All ({playlist.length})
                       </SelectItem>
                       {Object.values(Categories).map((category) => {
                         const count = categoryCounts.get(category) ?? 0;
@@ -379,17 +427,19 @@ export default function App() {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <DropdownMenuLabel className="p-0">Artista</DropdownMenuLabel>
+                  <DropdownMenuLabel className="p-0 text-white">
+                    Artists
+                  </DropdownMenuLabel>
                   <Select
                     value={selectedArtist}
                     onValueChange={setSelectedArtist}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="text-white">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={ALL_VALUE}>
-                        Todos ({playlist.length})
+                        All ({playlist.length})
                       </SelectItem>
                       {artists.map((artist) => (
                         <SelectItem key={artist} value={artist}>
@@ -402,7 +452,7 @@ export default function App() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <ul className="list-none p-4 space-y-0.5 overflow-y-auto">
+          <ul className="list-none p-2 space-y-0.5 overflow-y-auto">
             {filteredPlaylist.map(({ song, index }) => (
               <Button
                 key={song.id}
