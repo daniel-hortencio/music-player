@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Funnel, Pause, X } from "@phosphor-icons/react";
+import {
+  FunnelIcon,
+  PauseIcon,
+  PlayIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
+  SpeakerHighIcon,
+  SpeakerXIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 import { Audio } from "react-loader-spinner";
 import { playlist } from "./playlist";
 import { Categories } from "./types";
@@ -20,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 
 const ALL_VALUE = "all";
 
@@ -91,6 +101,8 @@ export default function App() {
   const [currentIndex, setCurrentIndex] = useState(getInitialIndex);
   const [playerReady, setPlayerReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(100);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const [selectedCategory, setSelectedCategory] =
     useState<string>(getInitialCategory);
   const [selectedArtist, setSelectedArtist] =
@@ -152,12 +164,45 @@ export default function App() {
   const next = () => goToRelativeSong(1);
   const previous = () => goToRelativeSong(-1);
 
+  const togglePlay = () => {
+    const player = playerRef.current;
+    if (!player) return;
+
+    if (isPlaying) {
+      player.pauseVideo();
+    } else {
+      player.playVideo();
+    }
+  };
+
+  const handleVolumeChange = (value: number[]) => {
+    setVolume(value[0]);
+    playerRef.current?.setVolume(value[0]);
+  };
+
+  const handleSpeedChange = (value: number[]) => {
+    const rate = Math.round(value[0] * 100) / 100;
+    setPlaybackRate(rate);
+    playerRef.current?.setPlaybackRate(rate);
+  };
+
   useEffect(() => {
     const createPlayer = () => {
       playerRef.current = new window.YT.Player("youtube-player", {
         videoId: playlist[currentIndex].id,
+        playerVars: {
+          controls: 0,
+          modestbranding: 1,
+          rel: 0,
+          iv_load_policy: 3,
+          disablekb: 1,
+        },
         events: {
-          onReady: () => setPlayerReady(true),
+          onReady: (event) => {
+            event.target.setVolume(volume);
+            event.target.setPlaybackRate(playbackRate);
+            setPlayerReady(true);
+          },
           onStateChange: (event) => {
             if (event.data === window.YT.PlayerState.ENDED) {
               next();
@@ -204,152 +249,190 @@ export default function App() {
   }, [selectedArtist]);
 
   return (
-    <div className="bg-black h-screen w-screen lg:grid grid-cols-[1fr_24rem] overflow-x-hidden">
-      <div className="flex flex-col justify-start ">
-        <div className="relative w-full aspect-video">
-          <div
-            id="youtube-player"
-            className="absolute inset-0 [&_iframe]:w-full [&_iframe]:h-full w-full h-full"
-          />
-        </div>
-
-        <h2 className="text-white">{playlist[currentIndex].title}</h2>
-
-        <div>
-          <Button onClick={previous}>Previous</Button>
-          <Button onClick={next}>Next</Button>
-        </div>
-
-        <p className="text-white">
-          Música {currentIndex + 1} de {playlist.length}
-        </p>
-      </div>
-      <div>
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-4">
-          <div className="space-x-2">
-            {selectedCategory !== ALL_VALUE && (
-              <Badge variant="secondary" className="gap-1 pr-1">
-                {selectedCategory}
-                <button
-                  type="button"
-                  onClick={() => setSelectedCategory(ALL_VALUE)}
-                  className="rounded-full p-0.5 hover:bg-black/10"
-                >
-                  <X size={10} />
-                </button>
-              </Badge>
-            )}
-
-            {selectedArtist !== ALL_VALUE && (
-              <Badge variant="secondary" className="gap-1 pr-1">
-                {selectedArtist}
-                <button
-                  type="button"
-                  onClick={() => setSelectedArtist(ALL_VALUE)}
-                  className="rounded-full p-0.5 hover:bg-black/10"
-                >
-                  <X size={10} />
-                </button>
-              </Badge>
-            )}
+    <>
+      <img
+        key={playlist[currentIndex].id}
+        src={`https://img.youtube.com/vi/${playlist[currentIndex].id}/maxresdefault.jpg`}
+        alt=""
+        className="fixed inset-0 -z-10 w-full h-full object-cover blur-3xl opacity-30 pointer-events-none animate-[thumbnail-fade-in_0.7s_ease-in-out]"
+      />
+      <div className="h-screen w-screen lg:grid grid-cols-[1fr_24rem] overflow-x-hidden relative">
+        <div className="flex flex-col justify-start">
+          <div className="relative w-full aspect-video z-10">
+            <div
+              id="youtube-player"
+              className="absolute inset-0 [&_iframe]:w-full [&_iframe]:h-full w-full h-full z-10"
+            />
           </div>
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-white hover:text-white hover:bg-white/10"
-              >
-                <Funnel size={20} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="flex w-auto gap-2 p-3"
-            >
-              <div className="flex flex-col gap-1">
-                <DropdownMenuLabel className="p-0">Categoria</DropdownMenuLabel>
-                <Select
-                  value={selectedCategory}
-                  onValueChange={setSelectedCategory}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUE}>
-                      Todas ({playlist.length})
-                    </SelectItem>
-                    {Object.values(Categories).map((category) => {
-                      const count = categoryCounts.get(category) ?? 0;
-                      return (
-                        <SelectItem
-                          key={category}
-                          value={category}
-                          disabled={count === 0}
-                        >
-                          {category} ({count})
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
 
-              <div className="flex flex-col gap-1">
-                <DropdownMenuLabel className="p-0">Artista</DropdownMenuLabel>
-                <Select
-                  value={selectedArtist}
-                  onValueChange={setSelectedArtist}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUE}>
-                      Todos ({playlist.length})
-                    </SelectItem>
-                    {artists.map((artist) => (
-                      <SelectItem key={artist} value={artist}>
-                        {artist} ({artistCounts.get(artist)})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        <ul className="list-none p-4 space-y-0.5 overflow-y-auto">
-          {filteredPlaylist.map(({ song, index }) => (
-            <Button
-              key={song.id}
-              onClick={() => setCurrentIndex(index)}
-              disabled={index === currentIndex}
-              variant="ghost"
-              className="flex w-full justify-start h-min p-0 text-white hover:text-white hover:bg-white/10"
-            >
-              <div className="relative min-w-20 w-20 aspect-video rounded-md overflow-hidden">
-                <img
-                  src={`https://img.youtube.com/vi/${song.id}/mqdefault.jpg`}
-                />
-              </div>
-              <div className="flex flex-col items-start flex-1">
-                <strong>{song.title}</strong>
-                <small>{song.author}</small>
-              </div>
-              <div className="w-9 flex items-center justify-center shrink-0">
-                {index === currentIndex &&
-                  (isPlaying ? (
-                    <Audio height={36} width={36} color="rgba(255,255,255)" />
+          <div className="py-2 px-4">
+            <div className="flex gap-2">
+              <Button onClick={previous} size="icon">
+                <SkipBackIcon size={20} />
+              </Button>
+              <Button onClick={togglePlay} size="icon">
+                {isPlaying ? <PauseIcon size={20} /> : <PlayIcon size={20} />}
+              </Button>
+              <Button onClick={next} size="icon">
+                <SkipForwardIcon size={20} />
+              </Button>
+              <div className="flex gap-4 flex-auto justify-end">
+                <div className="flex gap-2 items-center">
+                  <Slider
+                    className="w-24"
+                    value={[volume]}
+                    max={100}
+                    step={1}
+                    onValueChange={handleVolumeChange}
+                  />
+                  {volume === 0 ? (
+                    <SpeakerXIcon size={20} className="text-white/80" />
                   ) : (
-                    <Pause size={24} color="rgba(255,255,255,0.60)" />
-                  ))}
+                    <SpeakerHighIcon size={20} className="text-white/80" />
+                  )}
+                </div>
+                <div className="flex gap-2 items-center">
+                  <Slider
+                    className="w-24"
+                    value={[playbackRate]}
+                    min={0.2}
+                    max={2}
+                    step={0.05}
+                    onValueChange={handleSpeedChange}
+                  />
+                  <span className="text-white/80 text-sm tabular-nums w-9">
+                    {playbackRate.toFixed(2)}x
+                  </span>
+                </div>
               </div>
-            </Button>
-          ))}
-        </ul>
+            </div>
+          </div>
+        </div>
+        <div className="lg:max-h-screen lg:overflow-y-hidden flex flex-col">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-4">
+            <div className="space-x-2">
+              {selectedCategory !== ALL_VALUE && (
+                <Badge variant="secondary" className="gap-1 pr-1">
+                  {selectedCategory}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategory(ALL_VALUE)}
+                    className="rounded-full p-0.5 hover:bg-black/10"
+                  >
+                    <XIcon size={10} />
+                  </button>
+                </Badge>
+              )}
+
+              {selectedArtist !== ALL_VALUE && (
+                <Badge variant="secondary" className="gap-1 pr-1">
+                  {selectedArtist}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedArtist(ALL_VALUE)}
+                    className="rounded-full p-0.5 hover:bg-black/10"
+                  >
+                    <XIcon size={10} />
+                  </button>
+                </Badge>
+              )}
+            </div>
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon">
+                  <FunnelIcon size={20} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="flex w-auto gap-2 p-3"
+              >
+                <div className="flex flex-col gap-1">
+                  <DropdownMenuLabel className="p-0">
+                    Categoria
+                  </DropdownMenuLabel>
+                  <Select
+                    value={selectedCategory}
+                    onValueChange={setSelectedCategory}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_VALUE}>
+                        Todas ({playlist.length})
+                      </SelectItem>
+                      {Object.values(Categories).map((category) => {
+                        const count = categoryCounts.get(category) ?? 0;
+                        return (
+                          <SelectItem
+                            key={category}
+                            value={category}
+                            disabled={count === 0}
+                          >
+                            {category} ({count})
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <DropdownMenuLabel className="p-0">Artista</DropdownMenuLabel>
+                  <Select
+                    value={selectedArtist}
+                    onValueChange={setSelectedArtist}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_VALUE}>
+                        Todos ({playlist.length})
+                      </SelectItem>
+                      {artists.map((artist) => (
+                        <SelectItem key={artist} value={artist}>
+                          {artist} ({artistCounts.get(artist)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <ul className="list-none p-4 space-y-0.5 overflow-y-auto">
+            {filteredPlaylist.map(({ song, index }) => (
+              <Button
+                key={song.id}
+                onClick={() => setCurrentIndex(index)}
+                disabled={index === currentIndex}
+                variant="ghost"
+                className="flex w-full justify-start h-min p-0 text-white hover:text-white hover:bg-white/10"
+              >
+                <div className="relative min-w-20 w-20 aspect-video rounded-md overflow-hidden">
+                  <img
+                    src={`https://img.youtube.com/vi/${song.id}/mqdefault.jpg`}
+                  />
+                </div>
+                <div className="flex flex-col items-start flex-1">
+                  <strong>{song.title}</strong>
+                  <small>{song.author}</small>
+                </div>
+                <div className="w-9 flex items-center justify-center shrink-0">
+                  {index === currentIndex &&
+                    (isPlaying ? (
+                      <Audio height={36} width={36} color="rgba(255,255,255)" />
+                    ) : (
+                      <PauseIcon size={24} color="rgba(255,255,255,0.60)" />
+                    ))}
+                </div>
+              </Button>
+            ))}
+          </ul>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

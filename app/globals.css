@@ -135,3 +135,12 @@
 button {
   @apply cursor-pointer;
 }
+
+@keyframes thumbnail-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.3;
+  }
+}
